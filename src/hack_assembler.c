@@ -2,6 +2,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#include "translator.h"
+
 /**
  * Config contains all configuration information
  * known by the app
@@ -37,9 +39,14 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Failed to create %s\n", binary_file_name);
         return EXIT_FAILURE;
     }
-    // code ...
+    int err = translate(binaryfile, asmfile);
     fclose(binaryfile);
     fclose(asmfile);
+    if (err)
+    {
+        fprintf(stderr, "Failed to translate %s to assembly\n", config.asm_file_name);
+        return EXIT_FAILURE;
+    }
 
     return EXIT_SUCCESS;
 }
@@ -51,6 +58,6 @@ bool validate_arguments(int argc, char *argv[])
 
 Config process_arguments(int argc, char *argv[])
 {
-    Config c = {.asm_file_name=argv[1]};
+    Config c = {.asm_file_name = argv[1]};
     return c;
 }

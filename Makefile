@@ -1,11 +1,14 @@
-dirs = src
+srcDirs = src
+testDirs = tests
 
-.PHONY: all build clean
-
-all: build
+.PHONY: build test clean
 
 build:
-	$(MAKE) -C $(dirs)
+	$(MAKE) -C $(srcDirs)
+
+test: build
+	$(MAKE) -C $(testDirs) test
 
 clean:
-	$(MAKE) -C $(dirs) clean
+	$(MAKE) -C $(srcDirs) clean
+	$(MAKE) -C $(testDirs) clean

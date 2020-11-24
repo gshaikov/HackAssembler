@@ -29,7 +29,16 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Failed to open %s\n", config.asm_file_name);
         return EXIT_FAILURE;
     }
+
+    char binary_file_name[] = "out.hack";
+    FILE *binaryfile = fopen(binary_file_name, "w");
+    if (binaryfile == NULL)
+    {
+        fprintf(stderr, "Failed to create %s\n", binary_file_name);
+        return EXIT_FAILURE;
+    }
     // code ...
+    fclose(binaryfile);
     fclose(asmfile);
 
     return EXIT_SUCCESS;

@@ -1,12 +1,17 @@
+vpath %.o ../src
+
 .PHONY: test clean
 
-test: test_translator
-	./test_translator
+run_test_suites = \
+test_symbol_table
 
-test_translator: test_translator.o
-	cc -o test_translator test_translator.o ../src/translator.o -lcheck
+test: $(run_test_suites)
 
-test_translator.o:
+$(run_test_suites): test_%: test_%.o %.o
+	cc -o $@ $^ -lcheck
+	./$@
+
+test_%.o:
 
 clean:
-	rm -rf test_translator *.o 
+	rm -rf $(run_test_suites) *.o

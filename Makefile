@@ -1,7 +1,7 @@
+.PHONY: build test clean
+
 srcDirs = src
 testDirs = tests
-
-.PHONY: build test clean
 
 build:
 	$(MAKE) -C $(srcDirs)

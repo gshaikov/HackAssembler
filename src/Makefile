@@ -1,13 +1,25 @@
 .PHONY: clean
 
+binary_name = hack_assembler
+
+code_objects = \
+hack_assembler.o \
+translator.o \
+symbol_table.o
+
 warnings = -Wall -Werror -Wextra -Wno-sign-compare -Wno-unused-parameter -Wno-unused-variable -Wshadow
 
-hack_assembler: *.o
-	cc $(warnings) -o hack_assembler *.o
+# $^ catches all pre-requisites
+# Ref: https://makefiletutorial.com/
+$(binary_name): $(code_objects)
+	cc $(warnings) -o $@ $^
 
-*.o:
-	cc $(warnings) -c -o hack_assembler.o hack_assembler.c
-	cc $(warnings) -c -o translator.o translator.c
+# Static pattern rule:
+# 	targets ...: target-pattern: prereq-patterns ...
+# $< catches first pre-requisite only
+# Ref: https://makefiletutorial.com/
+$(code_objects): %.o: %.c
+	cc $(warnings) -c -o $@ $<
 
 clean:
-	rm -rf hack_assembler *.o
+	rm -rf $(binary_name) $(code_objects)

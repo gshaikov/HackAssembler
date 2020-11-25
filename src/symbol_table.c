@@ -40,3 +40,17 @@ void symtable_destroy(SymbolTable st)
     free(st);
     return;
 }
+
+// polynomial rolling hash function
+// https://cp-algorithms.com/string/string-hashing.html
+unsigned int _hash(const char *word, unsigned int max)
+{
+    unsigned int code = 0;
+    unsigned int pow = 1;
+    for (int i = 0; word[i] != '\0'; i++)
+    {
+        code = (code + ((word[i] >= 'a' ? word[i] - 'a' : word[i] - 'A') + 1) * pow) % max;
+        pow = (pow * 31) % max;
+    }
+    return code;
+}

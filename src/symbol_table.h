@@ -24,4 +24,6 @@ typedef HashNode** SymbolTable;
 SymbolTable symtable_new(void);
 void symtable_destroy(SymbolTable st);
 
+unsigned int _hash(const char *word, unsigned int max);
+
 #endif /* SYMBOLS_H */

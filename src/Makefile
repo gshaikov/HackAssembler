@@ -1,6 +1,6 @@
 .PHONY: clean
 
-binary_name = hack_assembler
+binary_name ?= hack_assembler
 
 code_objects = \
 hack_assembler.o \

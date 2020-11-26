@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#include "errors.h"
 #include "translator.h"
 
 /**
@@ -39,12 +40,12 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Failed to create %s\n", binary_file_name);
         return EXIT_FAILURE;
     }
-    int err = translate(binaryfile, asmfile);
+    Error err = translate(binaryfile, asmfile);
     fclose(binaryfile);
     fclose(asmfile);
     if (err)
     {
-        fprintf(stderr, "Failed to translate %s to assembly\n", config.asm_file_name);
+        fprintf(stderr, "Failed to translate %s to machine code\n", config.asm_file_name);
         return EXIT_FAILURE;
     }
 

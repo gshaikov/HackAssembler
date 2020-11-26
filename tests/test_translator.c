@@ -34,7 +34,8 @@ START_TEST(test__copy_statements_only)
     char buf[256];
     int n = fread(buf, sizeof(char), 256, to);
     buf[n] = '\0';
-    ck_assert_str_eq("a=b;c\nd;jmp\n(LOOP)\n", buf);
+    char exp[] = "a=b;c\nd;jmp\n(LOOP)\n";
+    ck_assert_str_eq(exp, buf);
 
     fclose(from);
     fclose(to);
@@ -73,6 +74,32 @@ START_TEST(test__load_labels)
 }
 END_TEST
 
+START_TEST(test__assemble_binary)
+{
+    SymbolTable table = symtable_new();
+    Symbol s1 = {.name = "FOO", .value = 2};
+    ck_assert(symtable_add(table, s1) == SUCCESS);
+
+    FILE *from = tmpfile();
+    fputs("@2\nD=A\n(FOO)\nD;JEQ\n@FOO\n@var\n@bar\n@var", from);
+    rewind(from);
+
+    FILE *to = tmpfile();
+    Error err = _assemble_binary(to, from, table);
+    ck_assert(err == SUCCESS);
+    rewind(to);
+
+    char buf[512];
+    int n = fread(buf, sizeof(char), 512, to);
+    buf[n] = '\0';
+    char exp[] = "0000000000000010\n1110110000010000\n1110001100000010\n0000000000000010\n0000000000010000\nn0000000000010001\nn0000000000010000";
+    ck_assert_str_eq(exp, buf);
+
+    fclose(from);
+    symtable_destroy(table);
+}
+END_TEST
+
 START_TEST(test__skip_until_newline)
 {
     FILE *tmp = tmpfile();
@@ -85,6 +112,40 @@ START_TEST(test__skip_until_newline)
 }
 END_TEST
 
+START_TEST(test__translate_A_instruction)
+{
+    {
+        char buf[] = "@2";
+        char bin[17];
+        _translate_A_instruction(bin, buf);
+        ck_assert_str_eq("0000000000000010", bin);
+    }
+    {
+        char buf[] = "@16";
+        char bin[17];
+        _translate_A_instruction(bin, buf);
+        ck_assert_str_eq("0000000000010000", bin);
+    }
+}
+END_TEST
+
+START_TEST(test__translate_C_instruction)
+{
+    {
+        char buf[] = "D=A";
+        char bin[17];
+        _translate_C_instruction(bin, buf);
+        ck_assert_str_eq("1110110000010000", bin);
+    }
+    {
+        char buf[] = "D;JEQ";
+        char bin[17];
+        _translate_C_instruction(bin, buf);
+        ck_assert_str_eq("1110001100000010", bin);
+    }
+}
+END_TEST
+
 Suite *symbols_suite(void)
 {
     Suite *s = suite_create("Translator");
@@ -93,10 +154,13 @@ Suite *symbols_suite(void)
     tcase_add_test(tc_logic, test__load_symbols_array);
     tcase_add_test(tc_logic, test__copy_statements_only);
     tcase_add_test(tc_logic, test__load_labels);
+    tcase_add_test(tc_logic, test__assemble_binary);
     suite_add_tcase(s, tc_logic);
 
     TCase *tc_helpers = tcase_create("helpers");
     tcase_add_test(tc_helpers, test__skip_until_newline);
+    tcase_add_test(tc_helpers, test__translate_A_instruction);
+    tcase_add_test(tc_helpers, test__translate_C_instruction);
     suite_add_tcase(s, tc_helpers);
 
     return s;

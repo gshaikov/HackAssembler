@@ -6,6 +6,7 @@
 
 #define PREDEFINED_SYMBOLS_NUMBER 23
 #define MAX_STATEMENT_LENGTH 256
+#define BINARY_WORD_LENGTH 16
 
 Symbol PREDEFINED_SYMBOLS[PREDEFINED_SYMBOLS_NUMBER] = {
     {.name = "R0", .value = 0},
@@ -116,6 +117,62 @@ Error _load_labels(SymbolTable st, FILE *from)
     return (ferror(from)) ? ERROR : SUCCESS;
 }
 
+Error _translate_A_instruction(char *bin, char *buf)
+{
+    int value;
+    int n = sscanf(&buf[1], "%d", &value);
+    if (n != 1)
+    {
+        return ERROR;
+    }
+    bin[16] = '\0';
+    for (int i = 15; i >= 0; i--)
+    {
+        if (value == 0)
+            bin[i] = '0';
+        else
+        {
+            bin[i] = (value % 2 == 0) ? '0' : '1';
+            value /= 2;
+        }
+    }
+    return SUCCESS;
+}
+
+Error _translate_C_instruction(char *bin, char *buf)
+{
+    return ERROR;
+}
+
+Error _assemble_binary(FILE *to, FILE *from, SymbolTable st)
+{
+    Error err;
+    char buf[MAX_STATEMENT_LENGTH];
+    char bin[BINARY_WORD_LENGTH + 1];
+    while (fgets(buf, MAX_STATEMENT_LENGTH, from) != NULL)
+    {
+        switch (buf[0])
+        {
+        case '@':
+            _translate_A_instruction(bin, buf);
+            fputs(bin, to);
+            fputc('\n', to);
+            break;
+        case '(':
+            err = _skip_until_newline(from);
+            if (err)
+                return err;
+            break;
+        default:
+            _translate_C_instruction(bin, buf);
+            fputs(bin, to);
+            fputc('\n', to);
+            break;
+        }
+    }
+    return (ferror(from)) ? ERROR : SUCCESS;
+}
+
 Error translate(FILE *binfile, FILE *asmfile)
 {
     Error err;
@@ -130,7 +187,7 @@ Error translate(FILE *binfile, FILE *asmfile)
         return err;
     }
 
-    err = _copy_statements_only(binfile, asmfile);
+    err = _copy_statements_only(tmp_asmfile, asmfile);
     if (err)
     {
         fclose(tmp_asmfile);
@@ -147,7 +204,12 @@ Error translate(FILE *binfile, FILE *asmfile)
         return err;
     }
 
-    // walk asm file, translate to new file, populate DS with @variables and @labels
+    err = _assemble_binary(asmfile, tmp_asmfile, table);
+    {
+        fclose(tmp_asmfile);
+        symtable_destroy(table);
+        return err;
+    }
 
     fclose(tmp_asmfile);
     symtable_destroy(table);

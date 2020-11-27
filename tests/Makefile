@@ -8,7 +8,8 @@ test_translator
 
 # Variables can be assigned for specific targets
 test_translator: dependencies = \
-../src/symbol_table.o
+../src/symbol_table.o \
+../src/string_table.o
 
 test: $(run_test_suites)
 

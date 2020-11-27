@@ -14,14 +14,6 @@ make
 
 The binary file `hack_assembler` will appear in the root directory.
 
-### Test
-
-``` bash
-make test
-```
-
-Tests are implemented with [check](https://libcheck.github.io/check/doc/check_html/index.html#Top) unit test framework.
-
 ### Use
 
 ``` bash
@@ -31,3 +23,12 @@ Tests are implemented with [check](https://libcheck.github.io/check/doc/check_ht
 The output binary machine code will be stored in `out.hack` file in the root.
 
 The example Hack assembly code is provided in `add` , `max` , `rect` , and `pong` directories.
+
+### Test
+
+``` bash
+make test
+make test_integration
+```
+
+Tests are implemented with [check](https://libcheck.github.io/check/doc/check_html/index.html#Top) unit test framework.

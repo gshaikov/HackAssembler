@@ -189,28 +189,18 @@ Error _load_labels(SymbolTable st, FILE *from)
     return (ferror(from)) ? ERROR : SUCCESS;
 }
 
-Error _translate_A_instruction(char *bin, char *buf, SymbolTable st, int *p_next_free_address)
+Error _store_new_address_variable(SymbolTable st, char *buf, int free_address)
 {
-    int value;
-    int n = sscanf(&buf[1], "%d", &value);
-    if (n != 1)
-    {
-        Symbol *p_s = symtable_view_by_name(st, &buf[1]);
-        if (p_s == NULL)
-        {
-            value = *p_next_free_address;
-            (*p_next_free_address)++;
-            Symbol s;
-            strcpy(s.name, &buf[1]);
-            s.value = value;
-            if (symtable_add(st, s))
-                return ERROR;
-        }
-        else
-            value = p_s->value;
-    }
-    bin[16] = '\0';
-    for (int i = 15; i >= 0; i--)
+    Symbol s;
+    strcpy(s.name, buf);
+    s.value = free_address;
+    return symtable_add(st, s);
+}
+
+void _convert_integer_to_bit_string(char *bin, int size, int value)
+{
+    bin[size - 1] = '\0';
+    for (int i = size - 2; i >= 0; i--)
     {
         if (value == 0)
             bin[i] = '0';
@@ -220,6 +210,28 @@ Error _translate_A_instruction(char *bin, char *buf, SymbolTable st, int *p_next
             value /= 2;
         }
     }
+}
+
+Error _translate_A_instruction(char *bin, char *buf, SymbolTable st, int *p_next_free_address)
+{
+    Error err;
+    int value;
+    int n = sscanf(&buf[1], "%d", &value);
+    if (n != 1)
+    {
+        Symbol *p_s = symtable_view_by_name(st, &buf[1]);
+        if (p_s == NULL)
+        {
+            value = *p_next_free_address;
+            (*p_next_free_address)++;
+            err = _store_new_address_variable(st, &buf[1], value);
+            if (err)
+                return err;
+        }
+        else
+            value = p_s->value;
+    }
+    _convert_integer_to_bit_string(bin, BINARY_WORD_LENGTH + 1, value);
     return SUCCESS;
 }
 

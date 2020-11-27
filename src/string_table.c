@@ -39,13 +39,13 @@ StrTable strtable_new(void)
     return table;
 }
 
-void _node_destroy(StrNode *n)
+void _strtable_node_destroy(StrNode *n)
 {
     if (n == NULL)
     {
         return;
     }
-    _node_destroy(n->next);
+    _strtable_node_destroy(n->next);
     free(n);
     return;
 }
@@ -55,7 +55,7 @@ void strtable_destroy(StrTable st)
 {
     for (int i = 0; i < HASH_TABLE_SIZE; i++)
     {
-        _node_destroy(st[i]);
+        _strtable_node_destroy(st[i]);
     }
     free(st);
     return;
@@ -63,7 +63,7 @@ void strtable_destroy(StrTable st)
 
 // polynomial rolling hash function
 // https://cp-algorithms.com/string/string-hashing.html
-unsigned int _hash(const char *word, unsigned int max)
+unsigned int _strtable_hash(const char *word, unsigned int max)
 {
     unsigned int code = 0;
     unsigned int pow = 1;
@@ -75,7 +75,7 @@ unsigned int _hash(const char *word, unsigned int max)
     return code;
 }
 
-Error _store_in_table(StrTable st, unsigned int idx, StrNode *n)
+Error _strtable_store_in_table(StrTable st, unsigned int idx, StrNode *n)
 {
     if (n == NULL)
     {
@@ -97,10 +97,10 @@ Error strtable_add(StrTable st, StrEntry s)
     {
         return ERROR;
     }
-    return _store_in_table(st, _hash(s.key, HASH_TABLE_SIZE), n);
+    return _strtable_store_in_table(st, _strtable_hash(s.key, HASH_TABLE_SIZE), n);
 }
 
-StrEntry *_find_node_in_list(StrNode *n, const char *name)
+StrEntry *_strtable_find_node_in_list(StrNode *n, const char *name)
 {
     if (n != NULL)
     {
@@ -108,13 +108,13 @@ StrEntry *_find_node_in_list(StrNode *n, const char *name)
         {
             return &n->s;
         }
-        return _find_node_in_list(n->next, name);
+        return _strtable_find_node_in_list(n->next, name);
     }
     return NULL;
 }
 
 StrEntry *strtable_view_by_name(StrTable st, const char *symbol_name)
 {
-    unsigned int idx = _hash(symbol_name, HASH_TABLE_SIZE);
-    return _find_node_in_list(st[idx], symbol_name);
+    unsigned int idx = _strtable_hash(symbol_name, HASH_TABLE_SIZE);
+    return _strtable_find_node_in_list(st[idx], symbol_name);
 }

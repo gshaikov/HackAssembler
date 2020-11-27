@@ -28,9 +28,9 @@ void strtable_destroy(StrTable st);
 Error strtable_add(StrTable st, StrEntry s);
 StrEntry *strtable_view_by_name(StrTable st, const char *symbol_name);
 
-unsigned int _hash(const char *word, unsigned int max);
+unsigned int _strtable_hash(const char *word, unsigned int max);
 
-Error _store_in_table(StrTable st, unsigned int idx, StrNode *n);
-StrEntry *_find_node_in_list(StrNode *n, const char *name);
+Error _strtable_store_in_table(StrTable st, unsigned int idx, StrNode *n);
+StrEntry *_strtable_find_node_in_list(StrNode *n, const char *name);
 
 #endif /* STRING_TABLE_H */

@@ -1,13 +1,16 @@
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "errors.h"
 #include "symbol_table.h"
+#include "string_table.h"
 
-#define PREDEFINED_SYMBOLS_NUMBER 23
 #define MAX_STATEMENT_LENGTH 256
 #define BINARY_WORD_LENGTH 16
+#define FIRST_FREE_ADDRESS 16
 
+#define PREDEFINED_SYMBOLS_NUMBER 23
 Symbol PREDEFINED_SYMBOLS[PREDEFINED_SYMBOLS_NUMBER] = {
     {.name = "R0", .value = 0},
     {.name = "R1", .value = 1},
@@ -34,12 +37,81 @@ Symbol PREDEFINED_SYMBOLS[PREDEFINED_SYMBOLS_NUMBER] = {
     {.name = "THAT", .value = 4},
 };
 
+#define COMP_NUMBER 28
+StrEntry COMP[COMP_NUMBER] = {
+    {.key = "0", .value = "0101010"},
+    {.key = "1", .value = "0111111"},
+    {.key = "-1", .value = "0111010"},
+    {.key = "D", .value = "0001100"},
+    {.key = "A", .value = "0110000"},
+    {.key = "M", .value = "1110000"},
+    {.key = "!D", .value = "0001101"},
+    {.key = "!A", .value = "0110001"},
+    {.key = "!M", .value = "1110001"},
+    {.key = "-D", .value = "0001111"},
+    {.key = "-A", .value = "0110011"},
+    {.key = "-M", .value = "1110011"},
+    {.key = "D+1", .value = "0011111"},
+    {.key = "A+1", .value = "0110111"},
+    {.key = "M+1", .value = "1110111"},
+    {.key = "D-1", .value = "0001110"},
+    {.key = "A-1", .value = "0110010"},
+    {.key = "M-1", .value = "1110010"},
+    {.key = "D+A", .value = "0000010"},
+    {.key = "D+M", .value = "1000010"},
+    {.key = "D-A", .value = "0010011"},
+    {.key = "D-M", .value = "1010011"},
+    {.key = "A-D", .value = "0000111"},
+    {.key = "M-D", .value = "1000111"},
+    {.key = "D&A", .value = "0000000"},
+    {.key = "D&M", .value = "1000000"},
+    {.key = "D|A", .value = "0010101"},
+    {.key = "D|M", .value = "1010101"},
+};
+
+#define DEST_NUMBER 8
+StrEntry DEST[DEST_NUMBER] = {
+    {.key = "", .value = "000"},
+    {.key = "M", .value = "001"},
+    {.key = "D", .value = "010"},
+    {.key = "MD", .value = "011"},
+    {.key = "A", .value = "100"},
+    {.key = "AM", .value = "101"},
+    {.key = "AD", .value = "110"},
+    {.key = "AMD", .value = "111"},
+};
+
+#define JUMP_NUMBER 8
+StrEntry JUMP[JUMP_NUMBER] = {
+    {.key = "", .value = "000"},
+    {.key = "JGT", .value = "001"},
+    {.key = "JEQ", .value = "010"},
+    {.key = "JGE", .value = "011"},
+    {.key = "JLT", .value = "100"},
+    {.key = "JNE", .value = "101"},
+    {.key = "JLE", .value = "110"},
+    {.key = "JMP", .value = "111"},
+};
+
 Error _load_symbols_array(SymbolTable st, int arr_size, Symbol *arr)
 {
     Error err;
     for (int i = 0; i < arr_size; i++)
     {
         err = symtable_add(st, arr[i]);
+        if (err)
+            return err;
+    }
+    return SUCCESS;
+}
+
+// TODO: auto generate (macros?)
+Error _load_string_entry_array(StrTable st, int arr_size, StrEntry *arr)
+{
+    Error err;
+    for (int i = 0; i < arr_size; i++)
+    {
+        err = strtable_add(st, arr[i]);
         if (err)
             return err;
     }
@@ -117,13 +189,25 @@ Error _load_labels(SymbolTable st, FILE *from)
     return (ferror(from)) ? ERROR : SUCCESS;
 }
 
-Error _translate_A_instruction(char *bin, char *buf)
+Error _translate_A_instruction(char *bin, char *buf, SymbolTable st, int *p_next_free_address)
 {
     int value;
     int n = sscanf(&buf[1], "%d", &value);
     if (n != 1)
     {
-        return ERROR;
+        Symbol *p_s = symtable_view_by_name(st, &buf[1]);
+        if (p_s == NULL)
+        {
+            value = *p_next_free_address;
+            (*p_next_free_address)++;
+            Symbol s;
+            strcpy(s.name, &buf[1]);
+            s.value = value;
+            if (symtable_add(st, s))
+                return ERROR;
+        }
+        else
+            value = p_s->value;
     }
     bin[16] = '\0';
     for (int i = 15; i >= 0; i--)
@@ -139,22 +223,58 @@ Error _translate_A_instruction(char *bin, char *buf)
     return SUCCESS;
 }
 
-Error _translate_C_instruction(char *bin, char *buf)
+Error _translate_C_instruction(char *bin, char *buf, StrTable comp, StrTable dest, StrTable jump)
 {
-    return ERROR;
+    char *p_comp = buf;
+    char *p_dest = "";
+    char *p_jump = "";
+
+    for (int i = 0; buf[i] != '\0'; i++)
+    {
+        switch (buf[i])
+        {
+        case '=':
+            p_comp = &buf[i + 1];
+            p_dest = buf;
+            buf[i] = '\0';
+            break;
+        case ';':
+            p_jump = &buf[i + 1];
+            buf[i] = '\0';
+            break;
+        }
+    }
+
+    StrEntry *s_comp = strtable_view_by_name(comp, p_comp);
+    if (s_comp == NULL)
+        return ERROR;
+    StrEntry *s_dest = strtable_view_by_name(dest, p_dest);
+    if (s_dest == NULL)
+        return ERROR;
+    StrEntry *s_jump = strtable_view_by_name(jump, p_jump);
+    if (s_jump == NULL)
+        return ERROR;
+
+    int n = sprintf(bin, "111%s%s%s", s_comp->value, s_dest->value, s_jump->value);
+    return (n != BINARY_WORD_LENGTH) ? ERROR : SUCCESS;
 }
 
-Error _assemble_binary(FILE *to, FILE *from, SymbolTable st)
+// TODO: use struct for repositories
+Error _assemble_binary(FILE *to, FILE *from, SymbolTable st, StrTable comp, StrTable dest, StrTable jump)
 {
     Error err;
     char buf[MAX_STATEMENT_LENGTH];
     char bin[BINARY_WORD_LENGTH + 1];
-    while (fgets(buf, MAX_STATEMENT_LENGTH, from) != NULL)
+    int next_free_address = FIRST_FREE_ADDRESS;
+    int *p_next_free_address = &next_free_address;
+    while (fscanf(from, "%s", buf) == 1)
     {
         switch (buf[0])
         {
         case '@':
-            _translate_A_instruction(bin, buf);
+            err = _translate_A_instruction(bin, buf, st, p_next_free_address);
+            if (err)
+                return err;
             fputs(bin, to);
             fputc('\n', to);
             break;
@@ -164,7 +284,9 @@ Error _assemble_binary(FILE *to, FILE *from, SymbolTable st)
                 return err;
             break;
         default:
-            _translate_C_instruction(bin, buf);
+            err = _translate_C_instruction(bin, buf, comp, dest, jump);
+            if (err)
+                return err;
             fputs(bin, to);
             fputc('\n', to);
             break;
@@ -173,25 +295,59 @@ Error _assemble_binary(FILE *to, FILE *from, SymbolTable st)
     return (ferror(from)) ? ERROR : SUCCESS;
 }
 
+// TODO: wrap all destroy and fclose
 Error translate(FILE *binfile, FILE *asmfile)
 {
     Error err;
-    SymbolTable table = symtable_new();
-    FILE *tmp_asmfile = tmpfile();
 
+    SymbolTable table = symtable_new();
     err = _load_symbols_array(table, PREDEFINED_SYMBOLS_NUMBER, PREDEFINED_SYMBOLS);
     if (err)
     {
-        fclose(tmp_asmfile);
         symtable_destroy(table);
         return err;
     }
+
+    StrTable comp = strtable_new();
+    err = _load_string_entry_array(comp, COMP_NUMBER, COMP);
+    if (err)
+    {
+        symtable_destroy(table);
+        strtable_destroy(comp);
+        return err;
+    }
+
+    StrTable dest = strtable_new();
+    err = _load_string_entry_array(dest, DEST_NUMBER, DEST);
+    if (err)
+    {
+        symtable_destroy(table);
+        strtable_destroy(comp);
+        strtable_destroy(dest);
+        return err;
+    }
+
+    StrTable jump = strtable_new();
+    err = _load_string_entry_array(jump, JUMP_NUMBER, JUMP);
+    if (err)
+    {
+        symtable_destroy(table);
+        strtable_destroy(comp);
+        strtable_destroy(dest);
+        strtable_destroy(jump);
+        return err;
+    }
+
+    FILE *tmp_asmfile = tmpfile();
 
     err = _copy_statements_only(tmp_asmfile, asmfile);
     if (err)
     {
         fclose(tmp_asmfile);
         symtable_destroy(table);
+        strtable_destroy(comp);
+        strtable_destroy(dest);
+        strtable_destroy(jump);
         return err;
     }
     rewind(tmp_asmfile);
@@ -201,17 +357,27 @@ Error translate(FILE *binfile, FILE *asmfile)
     {
         fclose(tmp_asmfile);
         symtable_destroy(table);
+        strtable_destroy(comp);
+        strtable_destroy(dest);
+        strtable_destroy(jump);
         return err;
     }
+    rewind(tmp_asmfile);
 
-    err = _assemble_binary(asmfile, tmp_asmfile, table);
+    err = _assemble_binary(binfile, tmp_asmfile, table, comp, dest, jump);
     {
         fclose(tmp_asmfile);
         symtable_destroy(table);
+        strtable_destroy(comp);
+        strtable_destroy(dest);
+        strtable_destroy(jump);
         return err;
     }
 
     fclose(tmp_asmfile);
     symtable_destroy(table);
+    strtable_destroy(comp);
+    strtable_destroy(dest);
+    strtable_destroy(jump);
     return SUCCESS;
 }

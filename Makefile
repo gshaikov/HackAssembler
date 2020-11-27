@@ -13,8 +13,8 @@ test: build
 	$(MAKE) -C $(testDir) -B test
 
 test_integration: build
-	./$(binary_name) pong/Pong.asm
-	diff out.hack pong/Pong.hack
+	./$(binary_name) examples/pong/Pong.asm
+	diff out.hack examples/pong/Pong.hack
 	rm out.hack
 
 clean:

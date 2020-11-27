@@ -29,6 +29,7 @@ The example Hack assembly code is provided in `add` , `max` , `rect` , and `pong
 ``` bash
 make test
 make test_integration
+make test_memory
 ```
 
 Tests are implemented with [check](https://libcheck.github.io/check/doc/check_html/index.html#Top) unit test framework.

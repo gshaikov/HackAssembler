@@ -1,4 +1,4 @@
-.PHONY: build test test_integration clean
+.PHONY: build test test_integration test_memory clean
 
 binary_name = hack_assembler
 
@@ -15,6 +15,11 @@ test: build
 test_integration: build
 	./$(binary_name) examples/pong/Pong.asm
 	diff out.hack examples/pong/Pong.hack
+	rm out.hack
+
+test_memory: build
+	./scripts/docker_build.sh
+	./scripts/docker_run.sh "make build && valgrind --leak-check=full ./$(binary_name) examples/pong/Pong.asm"
 	rm out.hack
 
 clean:

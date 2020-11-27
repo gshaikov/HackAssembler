@@ -3,7 +3,7 @@
 
 #include "errors.h"
 
-#define MAX_KEY_LENGTH 32
+#define MAX_KEY_LENGTH 256
 #define MAX_VALUE_LENGTH 256
 #define HASH_TABLE_SIZE 256
 

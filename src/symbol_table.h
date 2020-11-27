@@ -3,7 +3,7 @@
 
 #include "errors.h"
 
-#define MAX_SYMBOL_LENGTH 32
+#define MAX_SYMBOL_LENGTH 256
 #define HASH_TABLE_SIZE 256
 
 /* Symbol repr. a symbolic refrence to memory address or instruction number */
